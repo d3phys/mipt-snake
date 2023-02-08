@@ -1,12 +1,12 @@
 #include <cstdio>
 #include <unistd.h>
 #include <getopt.h>
+#include <iostream>
 #include "view.h"
 
 struct Options
 {
-    bool enable_gui = false;
-    bool verbose = false;
+    std::string view_name;
 };
 
 Options parse_options(int argc, char* argv[]);
@@ -15,16 +15,18 @@ int
 main(int argc,
      char* argv[])
 {
-    Options options = parse_options(argc, argv);
+    try
+    {
+        Options options = parse_options(argc, argv);
 
-    View* view {};
-    if (options.enable_gui)
-        view = new GraphicsView {};
-    else
-        view = new TextView {};
+        View* view = View::get(options.view_name);
+        view->draw();
 
-    view->draw();
-    delete view;
+    } catch (const std::exception& ex)
+    {
+        std::fprintf(stderr, "Game crash: %s", ex.what());
+    }
+
     return 0;
 }
 
@@ -37,20 +39,16 @@ parse_options(int argc,
      * Note: the last element has to be filled with zeroes.
      */
     static struct option options[] = {
-        {"gui",     no_argument, NULL, 'g'},
-        {"verbose", no_argument, NULL, 'v'},
-        { 0,        0,           0,     0 },
+        {"view",     required_argument, NULL, 'v'},
+        { 0,         0,                 0,     0 },
     };
 
     Options opts {};
     int opt = 0;
-    while ((opt = getopt_long(argc, argv, "gv", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "v:", options, NULL)) != -1) {
         switch(opt) {
         case 'v':
-                opts.verbose = true;
-                break;
-        case 'g':
-                opts.enable_gui = true;
+                opts.view_name = optarg;
                 break;
         default:
                 break;

@@ -1,9 +1,13 @@
 #pragma once
 #include <cstdio>
+#include <cstdlib>
+#include <string>
 
 class View
 {
   public:
+
+    static View* get(const std::string& name);
     virtual void draw() = 0;
     virtual ~View() {}
 };
