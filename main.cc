@@ -2,36 +2,46 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <iostream>
+#include <sys/ioctl.h>
 #include "view.h"
+#include <signal.h>
 
 struct Options
 {
     std::string view_name;
 };
 
-Options parse_options(int argc, char* argv[]);
+Options parse_options( int argc, char* argv[]);
 
 int
-main(int argc,
-     char* argv[])
+main( int argc,
+      char* argv[])
 {
     try
     {
-        Options options = parse_options(argc, argv);
+        Options options = parse_options( argc, argv);
+        View* view = View::get( options.view_name);
 
-        View* view = View::get(options.view_name);
-        view->draw();
+        view->clear();
+        view->drawStatic();
 
-    } catch (const std::exception& ex)
+        for ( ;; )
+        {
+            view->drawDynamic();
+            __asm__ volatile( "nop");
+            usleep(500000);
+        }
+
+    } catch ( const std::exception& ex )
     {
-        std::fprintf(stderr, "Game crash: %s", ex.what());
+        std::fprintf( stderr, "Game crash: %s", ex.what());
     }
 
     return 0;
 }
 
 Options
-parse_options(int argc,
+parse_options( int argc,
               char* argv[])
 {
     /**
@@ -43,15 +53,17 @@ parse_options(int argc,
         { 0,         0,                 0,     0 },
     };
 
-    Options opts {};
-    int opt = 0;
-    while ((opt = getopt_long(argc, argv, "v:", options, NULL)) != -1) {
-        switch(opt) {
-        case 'v':
-                opts.view_name = optarg;
-                break;
-        default:
-                break;
+    Options opts{};
+    int opt{};
+    while ( (opt = getopt_long( argc, argv, "v:", options, NULL)) != -1 )
+    {
+        switch(opt)
+        {
+          case 'v':
+            opts.view_name = optarg;
+            break;
+          default:
+            break;
         }
     }
 

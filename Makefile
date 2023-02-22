@@ -12,7 +12,7 @@ include txx.mk
 TARGETS := target
 
 # Determine the object files
-OBJ := main.o model.o view.o controller.o
+OBJ := main.o model.o view.o controller.o tui.o gui.o
 
 # Use submodules instead of recursion
 MODULES :=
