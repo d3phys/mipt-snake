@@ -2,15 +2,14 @@
 #include <cstdio>
 #include <cstdlib>
 #include <string>
+#include <memory>
+#include "model.h"
 #include "boost.h"
 
-struct Point
+struct Size
 {
-  public:
-    int x, y;
-
-    Point(const Point&) = default;
-    Point& operator=(const Point&) = default;
+    int width;
+    int height;
 };
 
 class View
@@ -20,18 +19,14 @@ class View
 
   public:
     virtual void drawStatic() = 0;
-    virtual void drawDynamic() = 0;
+    virtual void drawDynamic( const Model& model) = 0;
     virtual void clear() = 0;
-    virtual void home() = 0;
-    virtual void drawPoint( const Point& point) = 0;
-    virtual void drawHorizontalLine( const Point& start, int length) = 0;
-    virtual void drawVerticalLine(   const Point& start, int length) = 0;
 
-    virtual std::pair<int, int> getWindowSize() const = 0;
+    virtual Size getWindowSize() const = 0;
     virtual ~View() {}
 
   private:
-    virtual void setWindowSize( const std::pair<int, int>& size) = 0;
+    virtual void setWindowSize( const Size& size) = 0;
 };
 
 class GraphicsView
@@ -39,13 +34,13 @@ class GraphicsView
 {
   public:
     virtual void drawStatic() override;
-    virtual std::pair<int, int> getWindowSize() const override {};
+    virtual Size getWindowSize() const override {};
 
   private:
-    virtual void setWindowSize( const std::pair<int, int>& size) override {};
+    virtual void setWindowSize( const Size&) override {};
 };
 
-class TextView
+class TextView final
   : public View
 {
   using ascii_t = char;
@@ -55,20 +50,23 @@ class TextView
     ~TextView();
 
     virtual void drawStatic() override;
-    virtual void drawDynamic() override;
+    virtual void drawDynamic( const Model& model) override;
     virtual void clear() override;
-    virtual void home() override;
-    virtual void drawPoint( const Point& point) override;
-    virtual void drawHorizontalLine( const Point& start, int length) override;
-    virtual void drawVerticalLine(   const Point& start, int length) override;
+
+    void home();
+    void drawCell( const Cell& cell, const char* utf);
+    void clearCell( const Cell& cell);
+
+    void drawHorizontalLine( const Cell& start, int length, const char* utf);
+    void drawVerticalLine(   const Cell& start, int length, const char* utf);
 
   private:
-    std::pair<int, int> window_size_;
+    Size window_size_;
 
   public:
-    virtual std::pair<int, int> getWindowSize() const override;
+    virtual Size getWindowSize() const override;
   private:
-    virtual void setWindowSize( const std::pair<int, int>& size) override;
+    virtual void setWindowSize( const Size& size) override;
     friend void tui_ResizeHandler( int);
 };
 

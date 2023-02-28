@@ -25,9 +25,13 @@ main( int argc,
         view->clear();
         view->drawStatic();
 
+        Model model{};
+        model.respawnSnake( {10, 5}, 10);
+
         for ( ;; )
         {
-            view->drawDynamic();
+            model.update();
+            view->drawDynamic( model);
             __asm__ volatile( "nop");
             usleep(500000);
         }

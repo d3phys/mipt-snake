@@ -3,16 +3,17 @@
 #include <sys/ioctl.h>
 #include <exception>
 #include <system_error>
+#include <algorithm>
 
-static std::pair<int, int>
+static Size
 tui_GetWindowSize()
 {
     struct winsize winsz{};
     int error = ioctl( 1, TIOCGWINSZ, &winsz);
     if ( error == -1 )
-        return perror( "ioctl failure"), std::pair<int, int>{};
+        return perror( "ioctl failure"), Size{};
 
-    return std::pair<int, int>{ winsz.ws_row, winsz.ws_col};
+    return Size{ winsz.ws_col, winsz.ws_row};
 }
 
 void
@@ -42,40 +43,77 @@ TextView::~TextView()
     signal(SIGWINCH, SIG_DFL);
 }
 
-std::pair<int, int>
+Size
 TextView::getWindowSize() const
 {
     return window_size_;
 }
 
 void
-TextView::setWindowSize( const std::pair<int, int>& size)
+TextView::setWindowSize( const Size& size)
 {
     window_size_ = size;
 }
 
 void
-TextView::drawDynamic()
+TextView::drawDynamic( const Model& model)
 {
-    drawPoint( {2, 2});
-    drawPoint( {3, 3});
-    drawPoint( {4, 4});
-    drawPoint( {5, 5});
-    drawPoint( {11, 11});
-    drawPoint( {12, 12});
-    drawPoint( {13, 13});
+    drawCell( {2, 2}, "~");
+
+    static std::list<Cell> old_snake {};
+    const std::list<Cell>& new_snake = model.getSnake();
+
+    std::list<Cell> intersect {};
+    std::set_intersection( old_snake.begin(), old_snake.end(),
+                           new_snake.begin(), new_snake.end(),
+                           std::back_inserter( intersect));
+
+    std::list<Cell> to_clear {};
+    std::set_difference( old_snake.begin(), old_snake.end(),
+                         intersect.begin(), intersect.end(),
+                         std::back_inserter( to_clear));
+
+    for ( auto&& cell : to_clear )
+    {
+        clearCell( cell);
+    }
+
+    std::set_difference( new_snake.begin(), new_snake.end(),
+                         intersect.begin(), intersect.end(),
+                         old_snake.begin());
+
+    const auto& snake = old_snake;
+
+    for ( auto&& cell : snake )
+    {
+        //drawCell( cell, "▅");
+        drawCell( cell, "%");
+    }
+
+    for ( auto&& cell : model.getRabbits() )
+    {
+        drawCell( cell, "🐇");
+    }
 
     std::fflush( stdout);
+
+    old_snake = new_snake;
 }
 
 void
 TextView::drawStatic()
 {
-    std::pair<int, int> size = getWindowSize();
-    drawHorizontalLine( {1, 1}, size.second);
-    drawHorizontalLine( {1, size.first - 1}, size.second);
-    drawVerticalLine( {1, 1}, size.first);
-    drawVerticalLine( {size.second, 1}, size.first);
+    Size size = getWindowSize();
+
+    drawHorizontalLine( {2, 1}, size.width, "═");
+    drawHorizontalLine( {2, size.height - 1}, size.width, "═");
+    drawVerticalLine( {1, 2}, size.height, "║");
+    drawVerticalLine( {size.width, 1}, size.height, "║");
+
+    drawCell( {1, 1}, "╔");
+    drawCell( {size.width, 1}, "╗");
+    drawCell( {1, size.height - 1}, "╚");
+    drawCell( {size.width, size.height - 1}, "╝");
 
     std::fflush( stdout);
 }
@@ -93,27 +131,39 @@ TextView::home()
 }
 
 void
-TextView::drawPoint( const Point& point)
+TextView::drawCell( const Cell& cell,
+                    const char* utf)
 {
-    std::printf( "\e[%d;%d;H", point.y, point.x);
-    std::printf( "━");
+    std::printf( "\e[%d;%d;H", cell.row, cell.col);
+    std::printf( "%s", utf);
 }
 
 void
-TextView::drawHorizontalLine( const Point& start, int length)
+TextView::clearCell( const Cell& cell)
 {
-    for (int x = start.x; x < length && x <= getWindowSize().second; x++)
+    std::printf( "\e[%d;%d;H", cell.row, cell.col);
+    std::printf( " ");
+}
+
+void
+TextView::drawHorizontalLine( const Cell& start,
+                              int length,
+                              const char* utf)
+{
+    for (int x = start.col; x < length && x <= getWindowSize().width; x++)
     {
-        drawPoint( {x, start.y});
+        drawCell( {x, start.row}, utf);
     }
 }
 
 void
-TextView::drawVerticalLine(   const Point& start, int length)
+TextView::drawVerticalLine( const Cell& start,
+                            int length,
+                            const char* utf)
 {
-    for (int y = start.y; y < length && y <= getWindowSize().first; y++)
+    for (int y = start.row; y < length && y <= getWindowSize().height; y++)
     {
-        drawPoint( {start.x, y});
+        drawCell( {start.col, y}, utf);
     }
 }
 
