@@ -26,7 +26,7 @@ main( int argc,
         view->drawStatic();
 
         Model model{};
-        model.respawnSnake( {10, 5}, 10);
+        //model.respawnSnake( {10, 5}, 10);
 
         for ( ;; )
         {

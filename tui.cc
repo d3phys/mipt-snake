@@ -58,17 +58,15 @@ TextView::setWindowSize( const Size& size)
 void
 TextView::drawDynamic( const Model& model)
 {
-    drawCell( {2, 2}, "~");
+    static std::deque<Cell> old_snake {};
+    const auto& new_snake = model.getSnake().getCells();
 
-    static std::list<Cell> old_snake {};
-    const std::list<Cell>& new_snake = model.getSnake();
-
-    std::list<Cell> intersect {};
+    std::deque<Cell> intersect {};
     std::set_intersection( old_snake.begin(), old_snake.end(),
                            new_snake.begin(), new_snake.end(),
                            std::back_inserter( intersect));
 
-    std::list<Cell> to_clear {};
+    std::deque<Cell> to_clear {};
     std::set_difference( old_snake.begin(), old_snake.end(),
                          intersect.begin(), intersect.end(),
                          std::back_inserter( to_clear));
@@ -86,7 +84,6 @@ TextView::drawDynamic( const Model& model)
 
     for ( auto&& cell : snake )
     {
-        //drawCell( cell, "▅");
         drawCell( cell, "%");
     }
 
@@ -95,6 +92,7 @@ TextView::drawDynamic( const Model& model)
         drawCell( cell, "🐇");
     }
 
+    home();
     std::fflush( stdout);
 
     old_snake = new_snake;
@@ -166,6 +164,14 @@ TextView::drawVerticalLine( const Cell& start,
         drawCell( {start.col, y}, utf);
     }
 }
+
+void
+TextView::setOnKey( const std::function<KeyHandler>& action)
+{
+    key_event_.subscribe( action);
+}
+
+
 
 
 

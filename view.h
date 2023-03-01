@@ -3,13 +3,26 @@
 #include <cstdlib>
 #include <string>
 #include <memory>
+#include <functional>
+#include <algorithm>
 #include "model.h"
 #include "boost.h"
 
+// poll select in main loop
+// read after poll
+//
 struct Size
 {
     int width;
     int height;
+};
+
+enum class KeyCode
+{
+    Left,
+    Right,
+    Up,
+    Down,
 };
 
 class View
@@ -21,6 +34,9 @@ class View
     virtual void drawStatic() = 0;
     virtual void drawDynamic( const Model& model) = 0;
     virtual void clear() = 0;
+
+    using KeyHandler = void (KeyCode key);
+    virtual void setOnKey( const std::function<KeyHandler>& action);
 
     virtual Size getWindowSize() const = 0;
     virtual ~View() {}
@@ -40,6 +56,25 @@ class GraphicsView
     virtual void setWindowSize( const Size&) override {};
 };
 
+template <typename THandler, typename Args>
+class Event
+{
+  public:
+    using Function = std::function<THandler>;
+
+    void subscribe( Function func) { subscribers_.push_back( func); }
+    void invoke( Args arg)
+    {
+        for ( auto&& sub : subscribers_ )
+        {
+            sub( arg);
+        }
+    };
+
+  private:
+    std::vector<Function> subscribers_;
+};
+
 class TextView final
   : public View
 {
@@ -53,6 +88,8 @@ class TextView final
     virtual void drawDynamic( const Model& model) override;
     virtual void clear() override;
 
+    virtual void setOnKey( const std::function<KeyHandler>& action) override;
+
     void home();
     void drawCell( const Cell& cell, const char* utf);
     void clearCell( const Cell& cell);
@@ -62,6 +99,7 @@ class TextView final
 
   private:
     Size window_size_;
+    Event<KeyHandler, int> key_event_;
 
   public:
     virtual Size getWindowSize() const override;
